@@ -22,7 +22,7 @@ static void ps2Init(void) {
 	AFIO->EXTICR[2] |= 0x00002000;
 	EXTI->IMR |= 0x00000800;
 	EXTI->FTSR |= 0x00000800;
-	NVIC->IP[40] = 0xF0;
+	NVIC->IP[40] = 0xB0;
 	NVIC->ISER[1] |= 0x00000100;
 }
 

@@ -20,3 +20,5 @@ u16 IERG3810_to_color(u8 r, u8 g, u8 b) {
 int IERG3810_rand(int l, int r) {
 	return rand() % (r - l) + l;
 }
+
+
