@@ -15,17 +15,8 @@
 static bool SETUP_FINISHED = false;
 
 static u16 const BG_COLOR = 0x877F;
-/*
-static u16 const WOOD_COLOR = 0xB160;
-static u16 const WOOD_X = 80, WOOD_Y = 15;
-static u16 const MYSELF_COLOR = 0x0E46;
-static u16 const MYSELF_X = 40, MYSELF_Y = 40;
-static int const DROP_Y = 2;
-
-static int const WOOD_GAP_Y = 110;
-static int const WOOD_BORDER_X = 3;
-static int const MYSELF_MOVE_X = 20, MYSELF_MOVE_Y = 20;
-*/
+// static u16 const WOOD_COLOR = 0xB160;
+// static u16 const MYSELF_COLOR = 0x0E46;
 
 static int ps2Cnt;
 static u8 ps2Save;
