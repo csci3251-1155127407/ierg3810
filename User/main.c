@@ -56,7 +56,10 @@ static void drawWood(int i) {
 		for (int k = 0; k < WOOD_LENGTH; k++){
 			if (y[i] + k < 0)
 				continue;
-			IERG3810_LCD_draw_dot(x[i] + j, y[i] + k, WOOD_COLOR);
+			if (wood[59 - k][j] == 0xffff)
+				IERG3810_LCD_draw_dot(x[i] + j, y[i] + k, BG_COLOR);
+			else 
+				IERG3810_LCD_draw_dot(x[i] + j, y[i] + k, wood[59 - k][j]);
 		}
 	}
 }
