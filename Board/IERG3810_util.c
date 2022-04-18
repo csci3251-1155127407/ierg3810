@@ -1,8 +1,8 @@
 #include <IERG3810_util.h>
 #include <stdlib.h>
 
-void IERG3810_delay(long long count) {
-	for (volatile long long i = 0; i < count; i++) {}
+void IERG3810_delay(long long cnt) {
+	for (volatile long long i = 0; i < cnt; i++) {}
 }
 
 void IERG3810_delay_sec(int sec) {

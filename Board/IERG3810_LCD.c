@@ -86,17 +86,17 @@ static inline bool withinScreen(u16 x, u16 y) {
 	return x < X && y < Y;
 }
 
-u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bgColor) {
+u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bg_color) {
 	int const X_LEN = 8, Y_LEN = 16;
 	if (!withinScreen(x + X_LEN - 1, y + Y_LEN - 1)) {
 		return x;
 	}
-	bool const transparent = bgColor > 0xFFFF;
+	bool const transparent = bg_color > 0xFFFF;
 	if (!transparent) {
 		IERG3810_LCD_draw_rect_init(x, y, X_LEN, Y_LEN);
 	}
 	
-	u16 x_now = x, y_now = y;
+	u16 xNow = x, yNow = y;
 	for (int k = Y_LEN / 8 - 1; k >= 0; k--) {
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < X_LEN; j++) {
@@ -104,17 +104,17 @@ u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bgColor) {
 					if (!transparent) {
 						*LCD_PRM = color;
 					} else {
-						IERG3810_LCD_draw_dot(x_now, y_now, color, false);
+						IERG3810_LCD_draw_dot(xNow, yNow, color, false);
 					}
 				} else {
 					if (!transparent) {
-						*LCD_PRM = bgColor;
+						*LCD_PRM = bg_color;
 					}
 				}
-				x_now++;
-				if (x_now == x + X_LEN) {
-					x_now = x;
-					y_now++;
+				xNow++;
+				if (xNow == x + X_LEN) {
+					xNow = x;
+					yNow++;
 				}
 			}
 		}
@@ -122,10 +122,10 @@ u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bgColor) {
 	return x + X_LEN;
 }
 
-u16 IERG3810_LCD_draw_str(u16 x, u16 y, char * const str, u16 color, u32 bgColor) {
-	int x_now = x;
+u16 IERG3810_LCD_draw_str(u16 x, u16 y, char * const str, u16 color, u32 bg_color) {
+	int xNow = x;
 	for (int i = 0; str[i]; i++) {
-		x_now = IERG3810_LCD_draw_char(x_now, y, str[i], color, bgColor);
+		xNow = IERG3810_LCD_draw_char(xNow, y, str[i], color, bg_color);
 	}
-	return x_now;
+	return xNow;
 }
