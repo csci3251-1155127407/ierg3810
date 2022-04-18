@@ -40,7 +40,7 @@ void IERG3810_LCD_init(void) {
 	GPIOB->BSRR = 0x00000001;
 }
 
-static inline void drawRectInit(u16 x, u16 y, u16 x_len, u16 y_len) {
+void IERG3810_LCD_draw_rect_init(u16 x, u16 y, u16 x_len, u16 y_len) {
 	*LCD_CMD = 0x2A;
 	*LCD_PRM = x >> 8 & 0xFF;
 	*LCD_PRM = x & 0xFF;
@@ -56,13 +56,25 @@ static inline void drawRectInit(u16 x, u16 y, u16 x_len, u16 y_len) {
 	*LCD_CMD = 0x2C;
 }
 
-void IERG3810_LCD_draw_dot(u16 x, u16 y, u16 color) {
-	drawRectInit(x, y, H - x, V - y + 1);
+void IERG3810_LCD_draw_dot(u16 x, u16 y, u16 color, bool init) {
+	if (init) {
+		IERG3810_LCD_draw_rect_init(x, y, X - x, Y - y);
+	}
 	*LCD_PRM = color;
 }
 
-void IERG3810_LCD_draw_rect(u16 x, u16 y, u16 x_len, u16 y_len, u16 color) {
-	drawRectInit(x, y, x_len, y_len);
+void IERG3810_LCD_draw_rect(int x, int y, u16 x_len, u16 y_len, u16 color) {
+	if (x < 0) {
+		x_len -= -x;
+		x = 0;
+	}
+	if (y < 0) {
+		y_len -= -y;
+		y = 0;
+	}
+	x_len = IERG3810_min(x_len, X - x);
+	y_len = IERG3810_min(y_len, Y - y);
+	IERG3810_LCD_draw_rect_init(x, y, x_len, y_len);
 	for (int i = 0; i < x_len; i++) {
 		for (int j = 0; j < y_len; j++) {
 			*LCD_PRM = color;
@@ -70,11 +82,18 @@ void IERG3810_LCD_draw_rect(u16 x, u16 y, u16 x_len, u16 y_len, u16 color) {
 	}
 }
 
+static inline bool withinScreen(u16 x, u16 y) {
+	return x < X && y < Y;
+}
+
 u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bgColor) {
 	int const X_LEN = 8, Y_LEN = 16;
+	if (!withinScreen(x + X_LEN - 1, y + Y_LEN - 1)) {
+		return x;
+	}
 	bool const transparent = bgColor > 0xFFFF;
 	if (!transparent) {
-		drawRectInit(x, y, X_LEN, Y_LEN);
+		IERG3810_LCD_draw_rect_init(x, y, X_LEN, Y_LEN);
 	}
 	
 	u16 x_now = x, y_now = y;
@@ -85,7 +104,7 @@ u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bgColor) {
 					if (!transparent) {
 						*LCD_PRM = color;
 					} else {
-						IERG3810_LCD_draw_dot(x_now, y_now, color);
+						IERG3810_LCD_draw_dot(x_now, y_now, color, false);
 					}
 				} else {
 					if (!transparent) {

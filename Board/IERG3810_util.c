@@ -21,4 +21,24 @@ int IERG3810_rand(int l, int r) {
 	return rand() % (r - l) + l;
 }
 
+int IERG3810_min(int x, int y) {
+	return x < y? x : y;
+}
 
+int IERG3810_max(int x, int y) {
+	return x > y? x : y;
+}
+
+void IERG3810_to_str(char * dest, int x) {
+	int len = 0;
+	for (; x > 0; x /= 10) {
+		dest[len++] = x % 10 + '0';
+	}
+	for (int i = 0; i < len / 2; i++) {
+		char tmp = dest[i];
+		dest[i] = dest[len - 1 - i];
+		dest[len - 1 - i] = tmp;
+	}
+	dest[len++] = '\n';
+	dest[len++] = '\0';
+}

@@ -1,4 +1,5 @@
 #pragma once
 
 void IERG3810_interrupt_init(void);
-char IERG3810_PS2_get(void);
+void IERG3810_PS2_clear_interrupt(void);
+int IERG3810_PS2_bit_get(void);

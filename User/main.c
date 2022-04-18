@@ -10,40 +10,78 @@
 #include <IERG3810_interrupt.h>
 #include <IERG3810_timer.h>
 #include <stdlib.h>
+#include <string.h>
 
 static bool SETUP_FINISHED = false;
 
 static u16 const BG_COLOR = 0x877F;
+/*
 static u16 const WOOD_COLOR = 0xB160;
+static u16 const WOOD_X = 80, WOOD_Y = 15;
 static u16 const MYSELF_COLOR = 0x0E46;
+static u16 const MYSELF_X = 40, MYSELF_Y = 40;
+static int const DROP_Y = 2;
 
-// Wood stuff.
-static int const WOOD_GAP = 110;
-static int const WOOD_X = 80, WOOD_Y = 15;
-static int const MAX_NUM_WOOD = 10;
-static int const BORDER_X = 3, DROP_Y = 2;
-static int x[MAX_NUM_WOOD], y[MAX_NUM_WOOD];
-static int woodIndex;
-static void createNewWood(int i) {
-	x[i] = IERG3810_rand(BORDER_X, H - BORDER_X - WOOD_X);
-	y[i] = V - WOOD_Y;
-}
-static void drawWood(int i) {
-	IERG3810_LCD_draw_rect(x[i], y[i], WOOD_X, WOOD_Y, WOOD_COLOR);
-}
-static void clearWood(int i) {
-	IERG3810_LCD_draw_rect(x[i], y[i], WOOD_X, WOOD_Y, BG_COLOR);
+static int const WOOD_GAP_Y = 110;
+static int const WOOD_BORDER_X = 3;
+static int const MYSELF_MOVE_X = 20, MYSELF_MOVE_Y = 20;
+*/
+
+static int ps2Cnt;
+static u8 ps2Save;
+
+static char ps2Decode(int ps2Code) {
+	if (ps2Code == 0x71) {return '.';}
+	if (ps2Code == 0x5A) {return 'E';}
+	if (ps2Code == 0x79) {return '+';}
+	if (ps2Code == 0x7B) {return '-';}
+	if (ps2Code == 0x7C) {return '*';}
+	if (ps2Code == 0x4A) {return '/';}
+	if (ps2Code == 0x70) {return '0';}
+	if (ps2Code == 0x69) {return '1';}
+	if (ps2Code == 0x72) {return '2';}
+	if (ps2Code == 0x7A) {return '3';}
+	if (ps2Code == 0x6B) {return '4';}
+	if (ps2Code == 0x73) {return '5';}
+	if (ps2Code == 0x74) {return '6';}
+	if (ps2Code == 0x6C) {return '7';}
+	if (ps2Code == 0x75) {return '8';}
+	if (ps2Code == 0x7D) {return '9';}
+	return '\0';
 }
 
-// Myself stuff.
-static int const MYSELF_X = 40, MYSELF_Y = 40;
-static int const MOVE_X = 20, MOVE_Y = 20;
-static int xMyself = (240 - MYSELF_X) / 2, yMyself = DROP_Y;
-static void drawMyself() {
-	IERG3810_LCD_draw_rect(xMyself, yMyself, MYSELF_X, MYSELF_Y, MYSELF_COLOR);
+static char ps2GetChar(void) {
+	static u8 ps2Last;
+	if (ps2Cnt >= 11) {
+		int res = -1;
+		if (ps2Last != 0xF0) {
+			res = ps2Save;
+		}
+		ps2Last = ps2Save;
+		ps2Cnt = 0;
+		ps2Save = 0;
+		return ps2Decode(res);
+	}
+	return '\0';
 }
-static void clearMyself() {
-	IERG3810_LCD_draw_rect(xMyself, yMyself, MYSELF_X, MYSELF_Y, BG_COLOR);
+
+void EXTI15_10_IRQHandler(void) {
+	IERG3810_PS2_clear_interrupt();
+	int bit = IERG3810_PS2_bit_get();
+	if (ps2Cnt >= 1 && ps2Cnt <= 8) {
+		ps2Save |= bit << ps2Cnt - 1;
+	}
+	ps2Cnt++;
+	IERG3810_delay(10); // Needed for some reason...
+	
+	char res = ps2GetChar();
+	if (res == '4') {
+		// TODO
+		IERG3810_LED_toggle(0);
+	} else if (res == '6') {
+		// TODO
+		IERG3810_LED_toggle(1);
+	}
 }
 
 void TIM3_IRQHandler(void) {
@@ -51,27 +89,8 @@ void TIM3_IRQHandler(void) {
 	if (!SETUP_FINISHED) {
 		return;
 	}
-	int maxY = 0;
-	for (int i = 0; i < MAX_NUM_WOOD; i++) {
-		clearWood(i);
-		y[i] -= DROP_Y;
-		if (y[i] > 0) {
-			drawWood(i);
-			if (y[i] > maxY) {
-				maxY = y[i];
-			}
-		}
-	}
-	if (maxY < V - WOOD_GAP) {
-		createNewWood(woodIndex);
-		drawWood(woodIndex);
-		maxY = y[woodIndex];
-		woodIndex = (woodIndex + 1) % MAX_NUM_WOOD;
-	}
 	
-	clearMyself();
-	yMyself -= DROP_Y;
-	drawMyself();
+	// TODO
 }
 
 void TIM4_IRQHandler(void) {
@@ -90,28 +109,12 @@ int main() {
 	IERG3810_TIM4_init(7199, 4199);
 	IERG3810_SysTick_init(10);
 	IERG3810_delay(100000);
-	IERG3810_LCD_draw_rect(0, 0, H, V, 0x0000);
+	IERG3810_LCD_draw_rect(0, 0, X, Y, 0x0000);
 	srand(3810);
 	
-	IERG3810_LCD_draw_rect(0, 0, H, V, BG_COLOR);
-	drawMyself();
+	IERG3810_LCD_draw_rect(0, 0, X, Y, BG_COLOR);
 	SETUP_FINISHED = true;
 	
-	while (true) {
-		char res = IERG3810_PS2_get();
-		if (res == '4') {
-			clearMyself();
-			xMyself -= MOVE_X;
-			yMyself += MOVE_Y;
-			drawMyself();
-			IERG3810_LED_toggle(0);
-		} else if (res == '6') {
-			clearMyself();
-			xMyself += MOVE_X;
-			yMyself += MOVE_Y;
-			drawMyself();
-			IERG3810_LED_toggle(1);
-		}
-	}
+	while (true) {}
 }
 
