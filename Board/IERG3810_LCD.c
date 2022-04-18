@@ -103,7 +103,7 @@ u16 IERG3810_LCD_draw_char(u16 x, u16 y, char c, u16 color, u32 bgColor) {
 	return x + X_LEN;
 }
 
-u16 IERG3810_LCD_draw_str(u16 x, u16 y, char * const str, u16 color, u32 bgColor) {
+u16 IERG3810_LCD_draw_str(u16 x, u16 y, char const * str, u16 color, u32 bgColor) {
 	int x_now = x;
 	for (int i = 0; str[i]; i++) {
 		x_now = IERG3810_LCD_draw_char(x_now, y, str[i], color, bgColor);

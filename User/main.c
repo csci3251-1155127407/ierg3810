@@ -12,16 +12,19 @@
 #include <IERG3810_assets.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+extern u32 IERG3810_SysTick_cntr;
 
 static bool SETUP_FINISHED = false;
 
 static u16 const BG_COLOR = 0x877F;
-static u16 const WOOD_COLOR = 0xB160;
+//static u16 const WOOD_COLOR = 0xB160;
 
 // Game stuff.
 static int const LAND_WIDTH = 45;
 static int const DROP_Y = 5;
-static bool lose = 0;
+static bool lose = 0, started=false;
 static int score = 0;
 static char score_str[5];
 
@@ -85,13 +88,13 @@ static void drawMyself() {
 	}
 }
 
-static void clearMyself() {
+/*static void clearMyself() {
 	for (int i = 0; i < MYSELF_WIDTH; i++){
 			for (int j = 0; j < MYSELF_LENGTH; j++){
 				IERG3810_LCD_draw_dot(x[currentWood] + MYSELF_X + i, y[currentWood] + MYSELF_Y + j, BG_COLOR);
 			}
 	}
-}
+}*/
 
 static void gameInit() {
 	score = 0;
@@ -117,6 +120,10 @@ void TIM3_IRQHandler(void) {
 	if (!SETUP_FINISHED) {
 		return;
 	}
+	if (!started) {
+		return;
+	}
+	
 	if (!lose)
 	{
 		int maxY = 0;
@@ -151,59 +158,178 @@ void TIM4_IRQHandler(void) {
 	IERG3810_TIM_clear_interrupt(4);
 }
 
-int main() {
-	IERG3810_KEY_init();
-	IERG3810_LED_init();
-	IERG3810_buzzer_init();
-	IERG3810_clock_init();
-	IERG3810_USART_init();
-	IERG3810_LCD_init();
-	IERG3810_interrupt_init();
-	IERG3810_TIM3_init(7199, 524);
-	IERG3810_TIM4_init(7199, 4199);
-	IERG3810_SysTick_init(10);
-	IERG3810_delay(100000);
-	IERG3810_LCD_draw_rect(0, 0, H, V, 0x0000);
-	srand(3810);
-	gameInit();
-	while (true) {
-		while (!lose)
-		{
-			char res = IERG3810_PS2_get();
-			if (res == '4') {
-				if (x[currentWood] < x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP_Y - WOOD_LENGTH * 2)
+
+static int ps2Cnt;
+static u8 ps2Save;
+
+static char ps2Decode(int ps2Code) {
+	if (ps2Code == 0x71) {return '.';}
+	if (ps2Code == 0x5A) {return 'E';}
+	if (ps2Code == 0x79) {return '+';}
+	if (ps2Code == 0x7B) {return '-';}
+	if (ps2Code == 0x7C) {return '*';}
+	if (ps2Code == 0x4A) {return '/';}
+	if (ps2Code == 0x70) {return '0';}
+	if (ps2Code == 0x69) {return '1';}
+	if (ps2Code == 0x72) {return '2';}
+	if (ps2Code == 0x7A) {return '3';}
+	if (ps2Code == 0x6B) {return '4';}
+	if (ps2Code == 0x73) {return '5';}
+	if (ps2Code == 0x74) {return '6';}
+	if (ps2Code == 0x6C) {return '7';}
+	if (ps2Code == 0x75) {return '8';}
+	if (ps2Code == 0x7D) {return '9';}
+	return '\0';
+}
+
+static char ps2GetChar(void) {
+	static u8 ps2Last;
+	if (ps2Cnt >= 11) {
+		int res = -1;
+		if (ps2Last != 0xF0) {
+			res = ps2Save;
+		}
+		ps2Last = ps2Save;
+		ps2Cnt = 0;
+		ps2Save = 0;
+		return ps2Decode(res);
+	}
+	return '\0';
+}
+
+
+
+void EXTI15_10_IRQHandler(void) {
+	IERG3810_PS2_clear_interrupt();
+	int bit = IERG3810_PS2_bit_get();
+	if (ps2Cnt >= 1 && ps2Cnt <= 8) {
+		ps2Save |= bit << ps2Cnt - 1;
+	}
+	ps2Cnt++;
+	IERG3810_delay(10); // Needed for some reason...
+
+	if (!started) {
+		if (ps2GetChar() == 'E') {
+			// Does not work for some reason
+			IERG3810_LCD_draw_rect(0, 0, H, V, 0xaff4);
+			IERG3810_LCD_draw_str((H-8)/2,(V-16)/2,"3",0x0000,-1);
+			u32 val=IERG3810_SysTick_cntr;
+			//while(IERG3810_SysTick_cntr<val+1000){}
+			val+=1000;
+			IERG3810_LCD_draw_rect(0, 0, H, V, 0xaff4);
+			IERG3810_LCD_draw_str((H-8)/2,(V-16)/2,"2",0x0000,-1);
+			//while(IERG3810_SysTick_cntr<val+1000){}
+			val+=1000;
+			IERG3810_LCD_draw_rect(0, 0, H, V, 0xaff4);
+			IERG3810_LCD_draw_str((H-8)/2,(V-16)/2,"1",0x0000,-1);
+			//while(IERG3810_SysTick_cntr<val+1000){}
+			val+=1000;
+			IERG3810_LCD_draw_rect(0, 0, H, V, 0xaff4);
+			IERG3810_LCD_draw_str((H-8*8)/2,(V-16)/2,"Have Fun!",0x0000,-1);
+			//while(IERG3810_SysTick_cntr<val+1000){}
+			val+=1000;
+			// Does not work for some reason END
+			gameInit();
+			srand(IERG3810_SysTick_cntr);
+			IERG3810_SysTick_cntr=0;
+			started = true;
+			return;
+		}
+	}
+	if (!lose)
+	{
+		char res = ps2GetChar();
+		if (res == '4') {
+			if (x[currentWood] < x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP_Y - WOOD_LENGTH * 2)
+			{
+				lose = true;
+				
+			}
+			else 
+			{
+				score++;
+				currentWood = (currentWood + 1) % MAX_NUM_WOOD;
+			}
+			IERG3810_LED_toggle(0);
+		} else if (res == '6') {
+				if (x[currentWood] > x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP_Y - WOOD_LENGTH * 2)
 				{
 					lose = true;
-					
 				}
 				else 
 				{
 					score++;
 					currentWood = (currentWood + 1) % MAX_NUM_WOOD;
 				}
-				IERG3810_LED_toggle(0);
-			} else if (res == '6') {
-					if (x[currentWood] > x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP_Y - WOOD_LENGTH * 2)
-					{
-						lose = true;
-					}
-					else 
-					{
-						score++;
-						currentWood = (currentWood + 1) % MAX_NUM_WOOD;
-					}
-					IERG3810_LED_toggle(1);
-			}
+				IERG3810_LED_toggle(1);
 		}
-		while(lose)
+	}
+	if(lose)
+	{
+		char res = ps2GetChar();
+		if (res == 'E')
 		{
-			char res = IERG3810_PS2_get();
-			if (res == '+')
-			{
-				SETUP_FINISHED = false;
-				lose = 0;
+			SETUP_FINISHED = false;
+			lose = 0;
+		}
+	}
+}
+
+void drawStartScreen(void) {
+	IERG3810_LCD_draw_rect(0, 0, H, V, 0xaff4);
+	char const * strs[6] = {
+		"I E   F r o g",
+		"1155127407 | 1155xxxxxx",
+		"Instructions",
+		"LEFT to jump left",
+		"RIGHT to jump right",
+		"ENTER to start"
+	};
+	for (int i = 0; i < 2; i++) {
+		IERG3810_LCD_draw_str((H-strlen(strs[i])*8)/2, V-40-i*16,strs[i],0x0000,-1);
+	}
+	int const SCALE = 8;
+	for (int ii = 0; ii < 21*SCALE; ii++) {
+		for (int jj = 0; jj < 21*SCALE; jj++) {
+			int i = ii / SCALE, j = jj / SCALE;
+			if (frog[20 - j][i] == 0xffff) {
+				IERG3810_LCD_draw_dot(ii+(H-21*8)/2, 83+jj, 0xaff4);
+			} else {
+				IERG3810_LCD_draw_dot(ii+(H-21*8)/2, 83+jj, frog[20 - j][i]);
 			}
 		}
+	}
+	for (int i = 3; i < 6; i++) {
+		IERG3810_LCD_draw_str((H-strlen(strs[i])*8)/2, 97-i*16,strs[i],0x0000,-1);
+	}
+}
+
+
+int main() {
+	IERG3810_KEY_init();
+	IERG3810_LED_init();
+	IERG3810_buzzer_init();
+	IERG3810_clock_init();
+	IERG3810_SysTick_init(1);
+	IERG3810_USART_init();
+	IERG3810_LCD_init();
+	IERG3810_interrupt_init();
+	IERG3810_TIM3_init(7199, 4199);
+	IERG3810_TIM4_init(7199, 4199);
+	IERG3810_delay(100000);
+	IERG3810_LCD_draw_rect(0, 0, H, V, 0x0000);
+	
+	gameInit();
+	u16 psc = 4200;
+	
+	drawStartScreen();
+	
+	while (true) {
+		while (!started) {}
+		while (!lose) {
+			IERG3810_TIM3_init(7199, psc / (8 + IERG3810_SysTick_cntr / 2000) - 1);
+		}
+		while (lose) {}
 		gameInit();
 	}
 }

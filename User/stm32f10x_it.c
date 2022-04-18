@@ -132,8 +132,10 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
+u32 volatile IERG3810_SysTick_cntr;
 void SysTick_Handler(void)
 {
+	IERG3810_SysTick_cntr++;
 }
 
 /******************************************************************************/
