@@ -9,6 +9,7 @@
 #include <IERG3810_util.h>
 #include <IERG3810_interrupt.h>
 #include <IERG3810_timer.h>
+#include <IERG3810_assets.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -16,34 +17,34 @@ static bool SETUP_FINISHED = false;
 
 static u16 const BG_COLOR = 0x877F;
 static u16 const WOOD_COLOR = 0xB160;
-static u16 const MYSELF_COLOR = 0x0E46;
 
 // Game stuff.
-static int const LAND_WIDTH = 55;
+static int const LAND_WIDTH = 45;
 static int const DROP_Y = 5;
 static bool lose = 0;
 static int score = 0;
 static char score_str[5];
 
 // Wood stuff.
-static int const WOOD_GAP = 10;
-static int const WOOD_WIDTH = 20, WOOD_LENGTH = 60;
+static int const WOOD_GAP_X = 5;
+static int const WOOD_GAP_Y = 10;
+static int const WOOD_WIDTH = 25, WOOD_LENGTH = 60;
 static int const MAX_NUM_WOOD = 10;
 static int x[MAX_NUM_WOOD], y[MAX_NUM_WOOD];
 static int woodIndex = 1;
 
 static void createNewWood(int i) {
 	int prev = (i + MAX_NUM_WOOD - 1)% MAX_NUM_WOOD;
-	if (x[prev] == 55)
-			x[i] = 81;
-	else if (x[prev] == 159)
-			x[i] = 133;
+	if (x[prev] == LAND_WIDTH)
+			x[i] = LAND_WIDTH + WOOD_WIDTH + WOOD_GAP_X;
+	else if (x[prev] == LAND_WIDTH + (WOOD_WIDTH + WOOD_GAP_X)* 4)
+			x[i] = x[prev] - WOOD_WIDTH - WOOD_GAP_X;
 	else 
 	{
 			if (rand() % 2 == 1)
-				x[i] = x[prev] + 26;
+				x[i] = x[prev] + WOOD_WIDTH + WOOD_GAP_X;
 			else 
-				x[i] = x[prev] - 26;
+				x[i] = x[prev] - WOOD_WIDTH - WOOD_GAP_X;
 	}
 	y[i] = V - WOOD_LENGTH;
 }
@@ -66,20 +67,25 @@ static void clearWood(int i) {
 
 
 // Myself stuff.
-static int const MYSELF_X = 12, MYSELF_Y = 20;
+static int const MYSELF_WIDTH = 21, MYSELF_LENGTH = 21;
+static int const MYSELF_X = 2 , MYSELF_Y = 35; // pos on the wood
+
 static int currentWood = 0;
 
 static void drawMyself() {
-	for (int i = 0; i < MYSELF_X; i++){
-			for (int j = 0; j < MYSELF_Y; j++){
-				IERG3810_LCD_draw_dot(x[currentWood] + 4 + i, y[currentWood] + 40 + j, MYSELF_COLOR);
+	for (int i = 0; i < MYSELF_WIDTH; i++){
+			for (int j = 0; j < MYSELF_LENGTH; j++){
+				if (y[currentWood] + MYSELF_Y + j < 0 || frog[20 - j][i] == 0xffff)
+					continue;
+				IERG3810_LCD_draw_dot(x[currentWood] + MYSELF_X + i, y[currentWood] + MYSELF_Y + j, frog[20 - j][i]);
 			}
 	}
 }
+
 static void clearMyself() {
-	for (int i = 0; i < MYSELF_X; i++){
-			for (int j = 0; j < MYSELF_Y; j++){
-				IERG3810_LCD_draw_dot(x[currentWood] + 4 + i, y[currentWood] + 40 + j, BG_COLOR);
+	for (int i = 0; i < MYSELF_WIDTH; i++){
+			for (int j = 0; j < MYSELF_LENGTH; j++){
+				IERG3810_LCD_draw_dot(x[currentWood] + MYSELF_X + i, y[currentWood] + MYSELF_Y + j, BG_COLOR);
 			}
 	}
 }
@@ -98,7 +104,7 @@ static void gameInit() {
 			y[i] = -1000;
 	}
 	woodIndex = 1;
-	x[0] = LAND_WIDTH + (rand() % 5) * 26;
+	x[0] = LAND_WIDTH + (rand() % 5) * (WOOD_WIDTH + WOOD_GAP_X);
 	y[0] = V - WOOD_LENGTH - 30;
 	SETUP_FINISHED = true;
 }
@@ -129,7 +135,7 @@ void TIM3_IRQHandler(void) {
 		IERG3810_LCD_draw_rect(H-26,V-32, 8, 16, BG_COLOR);
 		sprintf(score_str, "%d",score);
 		IERG3810_LCD_draw_str(H-26,V-32,score_str,0x0000,BG_COLOR);
-		if (maxY < V - WOOD_GAP - WOOD_LENGTH * 2) {
+		if (maxY < V - WOOD_GAP_Y - WOOD_LENGTH * 2) {
 			createNewWood(woodIndex);
 			//drawWood(woodIndex);
 			maxY = y[woodIndex];
@@ -162,7 +168,7 @@ int main() {
 		{
 			char res = IERG3810_PS2_get();
 			if (res == '4') {
-				if (x[currentWood] < x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP - WOOD_LENGTH * 2)
+				if (x[currentWood] < x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP_Y - WOOD_LENGTH * 2)
 				{
 					lose = true;
 					
@@ -174,7 +180,7 @@ int main() {
 				}
 				IERG3810_LED_toggle(0);
 			} else if (res == '6') {
-					if (x[currentWood] > x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP - WOOD_LENGTH * 2)
+					if (x[currentWood] > x[(currentWood + 1) % 10] || y[currentWood] > V - WOOD_GAP_Y - WOOD_LENGTH * 2)
 					{
 						lose = true;
 					}
