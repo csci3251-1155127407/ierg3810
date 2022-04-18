@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool SETUP_FINISHED = false;
+static bool setupFinished = false;
 
 static u16 const BG_COLOR = 0x877F;
 // static u16 const WOOD_COLOR = 0xB160;
@@ -77,7 +77,7 @@ void EXTI15_10_IRQHandler(void) {
 
 void TIM3_IRQHandler(void) {
 	IERG3810_TIM_clear_interrupt(3);
-	if (!SETUP_FINISHED) {
+	if (!setupFinished) {
 		return;
 	}
 	
@@ -104,7 +104,7 @@ int main() {
 	srand(3810);
 	
 	IERG3810_LCD_draw_rect(0, 0, X, Y, BG_COLOR);
-	SETUP_FINISHED = true;
+	setupFinished = true;
 	
 	while (true) {}
 }
